@@ -1,5 +1,7 @@
 from functools import partial
 
+from graphene.relay import is_node
+
 from ..fields import DjangoConnectionField
 from .utils import get_filtering_args_from_filterset, get_filterset_class
 
@@ -9,13 +11,15 @@ class DjangoFilterConnectionField(DjangoConnectionField):
     def __init__(self, type, fields=None, extra_filter_meta=None,
                  filterset_class=None, *args, **kwargs):
 
-        self.fields = fields or type._meta.filter_fields
-        meta = dict(model=type._meta.model,
+        base = type if is_node(type) else type._meta.node
+
+        self.fields = fields or base._meta.filter_fields
+        meta = dict(model=base._meta.model,
                     fields=self.fields)
         if extra_filter_meta:
             meta.update(extra_filter_meta)
         self.filterset_class = get_filterset_class(filterset_class, **meta)
-        self.filtering_args = get_filtering_args_from_filterset(self.filterset_class, type)
+        self.filtering_args = get_filtering_args_from_filterset(self.filterset_class, base)
         kwargs.setdefault('args', {})
         kwargs['args'].update(self.filtering_args)
         super(DjangoFilterConnectionField, self).__init__(type, *args, **kwargs)
